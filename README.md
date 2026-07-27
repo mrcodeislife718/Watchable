@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/watchable-logo.jpg" alt="Watchable logo" width="520">
+</p>
+
 # Watchable
 
 **A commercial streaming, media operations, creator distribution, audience, and revenue platform.**
