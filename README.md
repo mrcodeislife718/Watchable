@@ -1,208 +1,265 @@
 # Watchable
 
-**A commercial streaming, media operations, creator distribution, audience, and revenue platform.**
+**A TV and film streaming service platform.**
 
-Watchable is an independent media-technology product built to operate the complete lifecycle of valuable video content—from creator and studio intake through rights management, publishing, discovery, playback, audience growth, monetization, analytics, and long-term catalog value.
+> **Movies + TV + Sports + Daytime + Live TV**
 
-It is not a basic video gallery, a creator profile page, or a single-channel streaming application. Watchable combines the consumer viewing experience with the operational infrastructure required to run a modern media company.
+Watchable is a competitive streaming platform built around television, film, original programming, licensed entertainment, live viewing, sports, and premium screen content.
 
-## Product scope
+TV shows and films are the foundation of the service and are intended to represent approximately **60–70% of the platform’s content direction**. Creator tools, content operations, advertising systems, rights management, and analytics support that streaming business; they do not replace its identity.
 
-Watchable supports a broad catalog of original and licensed programming, including:
+## Mission
 
+Watchable is designed to build a major entertainment destination that combines the accessibility of free ad-supported streaming with the depth, quality, and convenience of premium television and film services.
+
+Its goals are to:
+
+- provide a full TV and film streaming experience across supported devices;
+- launch with a strong free, advertising-supported model while supporting premium access;
+- develop Watchable Originals and acquire licensed programming;
+- support movies, episodic television, live channels, sports, events, and pay-per-view content;
+- create fairer and more transparent economics for creators, producers, and rights holders;
+- make Black culture a flagship engine of the service while expanding opportunities for Black, Latino, Asian American, and other underserved creators;
+- combine entertainment, audience growth, advertising, subscriptions, licensing, and original production inside one scalable platform.
+
+## Entertainment scope
+
+Watchable is designed to support:
+
+- movies;
+- television shows;
+- Watchable Originals;
+- licensed programming;
 - documentaries;
-- educational series;
-- technology and innovation programming;
-- founder and employee stories;
-- interviews and conversations;
-- training and professional-development content;
-- original short-form programming;
-- behind-the-scenes productions;
-- community and cultural storytelling;
-- branded and sponsored programming.
+- reality television;
+- stand-up and sketch programming;
+- pay-per-view content;
+- theatrical releases;
+- sports and live events;
+- daytime television;
+- live television channels.
 
-## Platform pillars
+## Service model
 
-### Consumer streaming experience
+Watchable combines multiple proven streaming models without reducing the product to any single one:
 
-Watchable gives audiences a structured destination for discovering and viewing high-value programming across devices.
+- a Netflix- and Amazon-style on-demand viewing experience;
+- a Tubi-style free, advertising-supported launch strategy;
+- subscription and premium access where appropriate;
+- pay-per-view and event-based access;
+- live channels, daytime programming, sports, and events;
+- original-production revenue;
+- content licensing and distribution;
+- advertising and brand partnerships;
+- transparent creator and producer participation.
 
-Core capabilities include:
+## Intended platform architecture
 
-- catalog browsing and search;
-- genre, collection, topic, and series navigation;
-- title, episode, season, and contributor pages;
+```text
+Viewer applications
+├── Web
+├── Mobile
+├── Smart TV
+├── Streaming-device applications
+└── Partner and embedded experiences
+              │
+              ▼
+Identity, profiles, and access
+├── Accounts and profiles
+├── Household and device management
+├── Watchlists and viewing history
+├── Entitlements and subscriptions
+└── Parental, privacy, and accessibility settings
+              │
+              ▼
+Catalog and discovery
+├── Movies and television catalog
+├── Seasons, episodes, franchises, and collections
+├── Search and browse
+├── Editorial programming
+├── Recommendations
+└── Live guide and event discovery
+              │
+              ▼
+Playback and delivery
+├── Video playback
+├── Live streaming
+├── Adaptive delivery
+├── Captions, audio, and accessibility tracks
+├── Playback authorization
+└── Device-session management
+              │
+              ▼
+Monetization
+├── Advertising-supported viewing
+├── Subscriptions and premium access
+├── Pay-per-view
+├── Sponsorships and brand partnerships
+├── Licensing and distribution
+└── Revenue attribution
+              │
+              ▼
+Content and rights operations
+├── Studio and licensor intake
+├── Media and metadata management
+├── Editorial and technical review
+├── Rights, territories, windows, and terms
+├── Release scheduling
+├── Royalties and participation
+└── Takedown, expiration, and renewal
+              │
+              ▼
+Audience and business intelligence
+├── Viewing and engagement analytics
+├── Advertising performance
+├── Subscriber conversion and retention
+├── Title and catalog performance
+├── Revenue reporting
+└── Programming and acquisition intelligence
+```
+
+## Viewer experience
+
+The intended viewer experience includes:
+
+- catalog browsing across movies, shows, genres, collections, channels, and events;
+- title, series, season, episode, cast, and contributor pages;
 - personalized watchlists and viewing history;
 - continue-watching workflows;
-- recommendations and editorial collections;
-- secure media playback;
-- captions, transcripts, and accessibility metadata;
-- account, subscription, and entitlement management;
-- responsive viewing across supported web and device surfaces.
+- search, recommendations, and editorial collections;
+- secure on-demand and live playback;
+- captions, transcripts, audio options, and accessibility metadata;
+- account, subscription, entitlement, and device management;
+- ad-supported, premium, and pay-per-view access paths;
+- responsive experiences across supported viewing surfaces.
 
-### Creator and studio operations
+## Live, sports, and event programming
 
-Watchable provides creators, producers, educators, organizations, and internal studio teams with controlled tools for moving content from submission to distribution.
+Watchable is intended to support scheduled and real-time entertainment alongside on-demand content.
 
-- creator and organization profiles;
-- title and episode submission;
-- media, artwork, trailer, caption, and transcript management;
-- contributor and credit records;
-- review, revision, approval, and publishing workflows;
-- release scheduling;
-- rights, territory, term, and usage metadata;
-- content status and delivery tracking;
-- performance and revenue reporting;
-- communication between creators and platform operations.
+```text
+Live channels
+Sports programming
+Daytime television
+Premieres and special events
+Pay-per-view events
+Theatrical and limited-window releases
+Live creator and cultural programming
+```
 
-### Content operations
+The live system requires schedule management, channel and event metadata, entitlement checks, playback authorization, advertising insertion support, concurrency controls, and operational monitoring.
 
-The platform supports the operational work behind a trustworthy catalog:
+## Content acquisition and originals
 
-- editorial review;
-- metadata quality control;
-- media readiness checks;
-- accessibility review;
-- publishing approval;
-- scheduled release management;
-- catalog curation;
-- takedown and rights-expiration workflows;
-- version and asset history;
-- incident and content-review records.
+Watchable’s content supply model includes:
 
-### Distribution infrastructure
+- Watchable-produced original movies and series;
+- licensed television and film catalogs;
+- independent productions;
+- documentaries and unscripted programming;
+- sports and event rights;
+- theatrical and premium-window releases;
+- partnerships with studios, producers, distributors, creators, and cultural institutions.
 
-Watchable is designed to turn one production into a governed, reusable media asset that can be delivered across multiple commercial channels.
+Originals and licensed programming are governed through title, asset, contributor, ownership, territory, term, release-window, usage, revenue-participation, and expiration records.
 
-- direct-to-consumer streaming;
-- embedded and partner distribution;
-- licensed catalog delivery;
-- sponsored-content distribution;
-- promotional clips and trailers;
-- educational and institutional licensing;
-- controlled syndication;
-- platform and campaign-specific media packages.
+## Content lifecycle
 
-### Audience and growth systems
+```text
+Studio, producer, or licensor intake
+    -> rights and contributor records
+    -> media and metadata delivery
+    -> technical, editorial, and accessibility review
+    -> advertising and entitlement configuration
+    -> release scheduling
+    -> publication to on-demand, live, or event surfaces
+    -> audience engagement and monetization
+    -> revenue attribution and reporting
+    -> renewal, relicensing, archive, or takedown
+```
 
-- audience accounts and profiles;
-- engagement and retention analysis;
-- watch-time and completion metrics;
-- title, series, and collection performance;
-- campaign attribution;
-- subscriber conversion and churn signals;
-- audience segmentation;
-- editorial and recommendation feedback;
-- creator-facing performance reporting;
-- platform-level catalog intelligence.
+## Creator and producer economics
+
+Watchable is intended to improve the relationship between a streaming platform and the people who create its programming.
+
+The operating direction includes:
+
+- clearer ownership and licensing records;
+- transparent participation terms;
+- title- and agreement-level revenue attribution;
+- creator and producer reporting;
+- advertising, subscription, licensing, sponsorship, and pay-per-view revenue participation;
+- direct support for independent and underserved creators;
+- opportunities for Black, Latino, Asian American, and other underrepresented voices;
+- Black culture as a flagship programming and commercial engine rather than a secondary category.
 
 ## Revenue architecture
 
-Watchable is designed as a multi-revenue media platform rather than a product dependent on one monetization channel.
+Watchable is designed as a multi-revenue entertainment service.
 
 ```text
-Subscriptions
-Advertising
-Sponsorships
+Advertising-supported streaming
+Subscriptions and premium access
+Pay-per-view
+Sports and live-event access
+Advertising and sponsorships
+Original programming
 Content licensing
-Institutional and educational access
-Branded programming
 Partner distribution
+Brand-supported programming
 Catalog and format licensing
 ```
 
-Revenue records are associated with the relevant content, creator, agreement, campaign, distribution channel, and reporting period so commercial performance can be measured without losing the underlying rights context.
-
-## End-to-end content lifecycle
-
-```text
-Creator or studio intake
-    -> Rights and contributor records
-    -> Media and metadata submission
-    -> Technical and editorial review
-    -> Accessibility validation
-    -> Approval and release scheduling
-    -> Secure publication and distribution
-    -> Audience engagement
-    -> Revenue attribution
-    -> Analytics and catalog optimization
-    -> Renewal, licensing, archive, or takedown
-```
-
-## Platform architecture
-
-```text
-Watchable
-├── Consumer streaming application
-├── Creator and studio portal
-├── Content-management operations
-├── Administrative command center
-├── Media and metadata services
-├── Catalog and discovery services
-├── Playback and entitlement services
-├── Subscription and billing services
-├── Advertising and sponsorship operations
-├── Rights and licensing services
-├── Analytics and reporting
-├── Notifications and communications
-├── Trust, safety, and accessibility
-└── Distribution and partner interfaces
-```
-
-The system separates public viewing, creator operations, content review, commercial administration, and platform authority so each role receives the capabilities required for its work without unrestricted cross-surface access.
+Revenue records are intended to remain associated with the relevant title, episode, live event, agreement, rights holder, campaign, distribution channel, territory, and reporting period.
 
 ## Rights and provenance
 
-Watchable treats content as a rights-bearing commercial asset, not merely an uploaded file.
+Watchable treats every title and media asset as a rights-bearing commercial property.
 
 - title and asset ownership records;
 - contributor and credit history;
 - license term and territory information;
-- distribution permissions;
-- release and expiration dates;
+- release windows and distribution permissions;
 - source-asset and version lineage;
-- publication and takedown history;
-- agreement references;
+- publication, expiration, and takedown history;
+- agreement and royalty references;
 - sponsor and campaign relationships;
-- audit records for consequential changes.
+- audit records for consequential content and commercial changes.
 
 ## Trust, safety, and accessibility
 
 - Role-based operational access
 - Controlled publishing authority
+- Secure playback and entitlement checks
+- Rights, expiration, and takedown controls
 - Content-review and escalation workflows
-- Rights and takedown controls
-- Secure media access and entitlements
-- Captions, transcripts, and accessibility metadata
+- Captions, audio options, transcripts, and accessibility metadata
+- Age, parental, and content-rating controls
 - Versioned content and asset history
-- Auditability for publishing and commercial changes
 - Privacy-aware audience analytics
-- Human authority over consequential content decisions
+- Human authority over consequential programming, rights, and commercial decisions
 
-## Commercial customers and partners
+## Commercial direction
 
-Watchable is designed to support:
+Watchable is designed for audiences, studios, independent producers, rights holders, advertisers, sponsors, distributors, creators, and cultural partners.
 
-- independent creators and production companies;
-- documentary and educational producers;
-- businesses producing original programming;
-- training and professional-development organizations;
-- cultural and community institutions;
-- brands and sponsors;
-- schools and learning programs;
-- licensing and distribution partners;
-- audiences seeking substantive, high-quality programming.
+The intended business outcome is a scalable entertainment company with:
 
-## Engineering significance
-
-Watchable demonstrates the design of a full media operating platform rather than a single playback interface. It connects consumer product engineering, creator workflows, media operations, rights data, subscriptions, advertising, sponsorships, licensing, analytics, accessibility, trust and safety, and multi-channel distribution.
+- a large TV and film catalog;
+- a free ad-supported audience funnel;
+- premium subscription and event revenue;
+- original programming and recognizable franchises;
+- live channels, sports, daytime, and special events;
+- strong advertising and brand-partnership capabilities;
+- fairer economics for creators and producers;
+- a distinct Black- and Latino-owned identity with global audience potential.
 
 ## Repository boundary
 
-This repository is the controlled public product and technical-documentation surface for Watchable. Proprietary production source, media-processing workflows, recommendation logic, commercial agreements, customer data, and deployment assets are maintained privately.
+This repository is the controlled public product, architecture, service, and technical-documentation surface for Watchable. Proprietary production source, media-processing workflows, recommendation logic, advertising systems, commercial agreements, customer data, rights data, and deployment assets are maintained privately.
 
 ## Ownership and licensing
 
 Watchable is independently designed and developed by **Charles Castillo**, Software Engineer and AI Systems Engineer.
 
-All rights reserved. No source, architecture, branding, content, documentation, or commercial rights are granted without explicit written authorization.
+All rights reserved. No source, architecture, branding, content, documentation, programming, distribution, or commercial rights are granted without explicit written authorization.
