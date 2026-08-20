@@ -4,203 +4,47 @@ import { DatabaseSync } from 'node:sqlite';
 import { config } from './config.js';
 
 let db;
-
-export function getDb() {
-  if (db) return db;
-  fs.mkdirSync(path.dirname(config.databasePath), { recursive: true });
-  db = new DatabaseSync(config.databasePath);
-  db.exec('PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;');
-  migrate(db);
-  return db;
-}
-
-function migrate(database) {
-  database.exec(`
-    CREATE TABLE IF NOT EXISTS users (
-      id TEXT PRIMARY KEY,
-      email TEXT UNIQUE NOT NULL,
-      password_hash TEXT NOT NULL,
-      display_name TEXT NOT NULL,
-      role TEXT NOT NULL DEFAULT 'customer',
-      created_at TEXT NOT NULL
-    );
-    CREATE TABLE IF NOT EXISTS sessions (
-      token_hash TEXT PRIMARY KEY,
-      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      expires_at TEXT NOT NULL,
-      created_at TEXT NOT NULL
-    );
-    CREATE TABLE IF NOT EXISTS subscriptions (
-      id TEXT PRIMARY KEY,
-      user_id TEXT UNIQUE NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      plan_id TEXT NOT NULL,
-      status TEXT NOT NULL,
-      billing_provider TEXT NOT NULL,
-      provider_customer_id TEXT,
-      provider_subscription_id TEXT,
-      current_period_end TEXT,
-      originating_rep_id TEXT,
-      commission_rate REAL NOT NULL DEFAULT 0.20,
-      created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL
-    );
-    CREATE TABLE IF NOT EXISTS reps (
-      id TEXT PRIMARY KEY,
-      code TEXT UNIQUE NOT NULL,
-      name TEXT NOT NULL,
-      email TEXT,
-      status TEXT NOT NULL DEFAULT 'active',
-      default_rate REAL NOT NULL DEFAULT 0.20,
-      created_at TEXT NOT NULL
-    );
-    CREATE TABLE IF NOT EXISTS commission_events (
-      id TEXT PRIMARY KEY,
-      rep_id TEXT NOT NULL REFERENCES reps(id),
-      user_id TEXT NOT NULL REFERENCES users(id),
-      subscription_id TEXT NOT NULL REFERENCES subscriptions(id),
-      payment_reference TEXT UNIQUE NOT NULL,
-      gross_cents INTEGER NOT NULL,
-      rate REAL NOT NULL,
-      commission_cents INTEGER NOT NULL,
-      status TEXT NOT NULL DEFAULT 'earned',
-      created_at TEXT NOT NULL
-    );
-    CREATE TABLE IF NOT EXISTS devices (
-      id TEXT PRIMARY KEY,
-      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      name TEXT NOT NULL,
-      platform TEXT NOT NULL,
-      last_seen_at TEXT,
-      created_at TEXT NOT NULL
-    );
-    CREATE TABLE IF NOT EXISTS profiles (
-      id TEXT PRIMARY KEY,
-      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      name TEXT NOT NULL,
-      is_kids INTEGER NOT NULL DEFAULT 0,
-      created_at TEXT NOT NULL
-    );
-    CREATE TABLE IF NOT EXISTS content_sources (
-      id TEXT PRIMARY KEY,
-      name TEXT NOT NULL,
-      adapter_type TEXT NOT NULL,
-      status TEXT NOT NULL DEFAULT 'inactive',
-      rights_verified INTEGER NOT NULL DEFAULT 0,
-      config_json TEXT NOT NULL DEFAULT '{}',
-      created_at TEXT NOT NULL
-    );
-    CREATE TABLE IF NOT EXISTS channels (
-      id TEXT PRIMARY KEY,
-      source_id TEXT REFERENCES content_sources(id),
-      slug TEXT UNIQUE NOT NULL,
-      name TEXT NOT NULL,
-      category TEXT NOT NULL,
-      logo_url TEXT,
-      playback_url TEXT,
-      playback_type TEXT NOT NULL DEFAULT 'mp4',
-      premium INTEGER NOT NULL DEFAULT 0,
-      sports INTEGER NOT NULL DEFAULT 0,
-      active INTEGER NOT NULL DEFAULT 1,
-      rights_start TEXT,
-      rights_end TEXT,
-      territories TEXT NOT NULL DEFAULT 'US',
-      dvr_allowed INTEGER NOT NULL DEFAULT 0,
-      metadata_json TEXT NOT NULL DEFAULT '{}'
-    );
-    CREATE TABLE IF NOT EXISTS programs (
-      id TEXT PRIMARY KEY,
-      channel_id TEXT NOT NULL REFERENCES channels(id) ON DELETE CASCADE,
-      title TEXT NOT NULL,
-      description TEXT,
-      starts_at TEXT NOT NULL,
-      ends_at TEXT NOT NULL,
-      rating TEXT,
-      image_url TEXT
-    );
-    CREATE TABLE IF NOT EXISTS vod_assets (
-      id TEXT PRIMARY KEY,
-      source_id TEXT REFERENCES content_sources(id),
-      slug TEXT UNIQUE NOT NULL,
-      title TEXT NOT NULL,
-      description TEXT,
-      kind TEXT NOT NULL,
-      playback_url TEXT,
-      playback_type TEXT NOT NULL DEFAULT 'mp4',
-      premium INTEGER NOT NULL DEFAULT 0,
-      image_url TEXT,
-      active INTEGER NOT NULL DEFAULT 1,
-      rights_start TEXT,
-      rights_end TEXT,
-      territories TEXT NOT NULL DEFAULT 'US',
-      download_allowed INTEGER NOT NULL DEFAULT 0,
-      metadata_json TEXT NOT NULL DEFAULT '{}'
-    );
-    CREATE TABLE IF NOT EXISTS playback_sessions (
-      id TEXT PRIMARY KEY,
-      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      asset_type TEXT NOT NULL,
-      asset_id TEXT NOT NULL,
-      expires_at TEXT NOT NULL,
-      created_at TEXT NOT NULL
-    );
-    CREATE TABLE IF NOT EXISTS dvr_recordings (
-      id TEXT PRIMARY KEY,
-      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      program_id TEXT NOT NULL REFERENCES programs(id),
-      status TEXT NOT NULL DEFAULT 'scheduled',
-      created_at TEXT NOT NULL
-    );
-    CREATE TABLE IF NOT EXISTS favorites (
-      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      asset_type TEXT NOT NULL,
-      asset_id TEXT NOT NULL,
-      created_at TEXT NOT NULL,
-      PRIMARY KEY(user_id,asset_type,asset_id)
-    );
-    CREATE TABLE IF NOT EXISTS watch_events (
-      id TEXT PRIMARY KEY,
-      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      profile_id TEXT,
-      asset_type TEXT NOT NULL,
-      asset_id TEXT NOT NULL,
-      event_type TEXT NOT NULL,
-      position_seconds REAL,
-      created_at TEXT NOT NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS ad_campaigns (
-      id TEXT PRIMARY KEY,
-      name TEXT NOT NULL,
-      status TEXT NOT NULL DEFAULT 'draft',
-      creative_url TEXT NOT NULL,
-      click_url TEXT,
-      starts_at TEXT,
-      ends_at TEXT,
-      target_json TEXT NOT NULL DEFAULT '{}',
-      created_at TEXT NOT NULL
-    );
-    CREATE TABLE IF NOT EXISTS ad_impressions (
-      id TEXT PRIMARY KEY,
-      campaign_id TEXT NOT NULL REFERENCES ad_campaigns(id),
-      user_id TEXT REFERENCES users(id),
-      asset_type TEXT,
-      asset_id TEXT,
-      event_type TEXT NOT NULL,
-      created_at TEXT NOT NULL
-    );
-    CREATE TABLE IF NOT EXISTS audit_events (
-      id TEXT PRIMARY KEY,
-      actor_user_id TEXT,
-      action TEXT NOT NULL,
-      target_type TEXT,
-      target_id TEXT,
-      detail_json TEXT NOT NULL DEFAULT '{}',
-      created_at TEXT NOT NULL
-    );
-  `);
-}
-
-export function closeDb() {
-  if (db) db.close();
-  db = undefined;
-}
+export function getDb(){if(db)return db;fs.mkdirSync(path.dirname(config.databasePath),{recursive:true});db=new DatabaseSync(config.databasePath);db.exec('PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;');migrate(db);return db;}
+function migrate(database){database.exec(`
+CREATE TABLE IF NOT EXISTS users(id TEXT PRIMARY KEY,email TEXT UNIQUE NOT NULL,password_hash TEXT NOT NULL,display_name TEXT NOT NULL,role TEXT NOT NULL DEFAULT 'customer',created_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS sessions(token_hash TEXT PRIMARY KEY,user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,expires_at TEXT NOT NULL,created_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS subscriptions(id TEXT PRIMARY KEY,user_id TEXT UNIQUE NOT NULL REFERENCES users(id) ON DELETE CASCADE,plan_id TEXT NOT NULL,status TEXT NOT NULL,billing_provider TEXT NOT NULL,provider_customer_id TEXT,provider_subscription_id TEXT,current_period_end TEXT,originating_rep_id TEXT,commission_rate REAL NOT NULL DEFAULT .20,created_at TEXT NOT NULL,updated_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS reps(id TEXT PRIMARY KEY,code TEXT UNIQUE NOT NULL,name TEXT NOT NULL,email TEXT,status TEXT NOT NULL DEFAULT 'active',default_rate REAL NOT NULL DEFAULT .20,created_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS commission_events(id TEXT PRIMARY KEY,rep_id TEXT NOT NULL REFERENCES reps(id),user_id TEXT NOT NULL REFERENCES users(id),subscription_id TEXT NOT NULL REFERENCES subscriptions(id),payment_reference TEXT UNIQUE NOT NULL,gross_cents INTEGER NOT NULL,rate REAL NOT NULL,commission_cents INTEGER NOT NULL,status TEXT NOT NULL DEFAULT 'earned',created_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS devices(id TEXT PRIMARY KEY,user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,name TEXT NOT NULL,platform TEXT NOT NULL,device_fingerprint TEXT,last_seen_at TEXT,created_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS profiles(id TEXT PRIMARY KEY,user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,name TEXT NOT NULL,is_kids INTEGER NOT NULL DEFAULT 0,max_rating TEXT,preferred_languages TEXT NOT NULL DEFAULT '[]',accessibility_json TEXT NOT NULL DEFAULT '{}',pin_hash TEXT,created_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS content_sources(id TEXT PRIMARY KEY,name TEXT NOT NULL,adapter_type TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'inactive',rights_verified INTEGER NOT NULL DEFAULT 0,config_json TEXT NOT NULL DEFAULT '{}',created_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS channels(id TEXT PRIMARY KEY,source_id TEXT REFERENCES content_sources(id),slug TEXT UNIQUE NOT NULL,name TEXT NOT NULL,category TEXT NOT NULL,logo_url TEXT,playback_url TEXT,backup_playback_urls TEXT NOT NULL DEFAULT '[]',playback_type TEXT NOT NULL DEFAULT 'mp4',premium INTEGER NOT NULL DEFAULT 0,sports INTEGER NOT NULL DEFAULT 0,active INTEGER NOT NULL DEFAULT 1,rights_start TEXT,rights_end TEXT,territories TEXT NOT NULL DEFAULT 'US',dvr_allowed INTEGER NOT NULL DEFAULT 0,metadata_json TEXT NOT NULL DEFAULT '{}');
+CREATE TABLE IF NOT EXISTS programs(id TEXT PRIMARY KEY,channel_id TEXT NOT NULL REFERENCES channels(id) ON DELETE CASCADE,title TEXT NOT NULL,description TEXT,starts_at TEXT NOT NULL,ends_at TEXT NOT NULL,rating TEXT,image_url TEXT,metadata_json TEXT NOT NULL DEFAULT '{}');
+CREATE TABLE IF NOT EXISTS vod_assets(id TEXT PRIMARY KEY,source_id TEXT REFERENCES content_sources(id),slug TEXT UNIQUE NOT NULL,title TEXT NOT NULL,description TEXT,kind TEXT NOT NULL,playback_url TEXT,backup_playback_urls TEXT NOT NULL DEFAULT '[]',playback_type TEXT NOT NULL DEFAULT 'mp4',premium INTEGER NOT NULL DEFAULT 0,image_url TEXT,active INTEGER NOT NULL DEFAULT 1,rights_start TEXT,rights_end TEXT,territories TEXT NOT NULL DEFAULT 'US',download_allowed INTEGER NOT NULL DEFAULT 0,metadata_json TEXT NOT NULL DEFAULT '{}');
+CREATE TABLE IF NOT EXISTS media_tracks(id TEXT PRIMARY KEY,asset_type TEXT NOT NULL,asset_id TEXT NOT NULL,track_type TEXT NOT NULL,language TEXT NOT NULL,label TEXT,url TEXT,format TEXT,is_default INTEGER NOT NULL DEFAULT 0,created_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS playback_sessions(id TEXT PRIMARY KEY,user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,asset_type TEXT NOT NULL,asset_id TEXT NOT NULL,device_id TEXT,watermark_token TEXT,expires_at TEXT NOT NULL,created_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS dvr_recordings(id TEXT PRIMARY KEY,user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,program_id TEXT NOT NULL REFERENCES programs(id),status TEXT NOT NULL DEFAULT 'scheduled',created_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS favorites(user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,asset_type TEXT NOT NULL,asset_id TEXT NOT NULL,created_at TEXT NOT NULL,PRIMARY KEY(user_id,asset_type,asset_id));
+CREATE TABLE IF NOT EXISTS watch_events(id TEXT PRIMARY KEY,user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,profile_id TEXT,asset_type TEXT NOT NULL,asset_id TEXT NOT NULL,event_type TEXT NOT NULL,position_seconds REAL,metadata_json TEXT NOT NULL DEFAULT '{}',created_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS alerts(id TEXT PRIMARY KEY,user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,profile_id TEXT,asset_type TEXT NOT NULL,asset_id TEXT NOT NULL,alert_type TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'active',created_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS watch_parties(id TEXT PRIMARY KEY,host_user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,asset_type TEXT NOT NULL,asset_id TEXT NOT NULL,join_code TEXT UNIQUE NOT NULL,status TEXT NOT NULL DEFAULT 'scheduled',starts_at TEXT,created_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS party_members(party_id TEXT NOT NULL REFERENCES watch_parties(id) ON DELETE CASCADE,user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,joined_at TEXT NOT NULL,PRIMARY KEY(party_id,user_id));
+CREATE TABLE IF NOT EXISTS live_events(id TEXT PRIMARY KEY,slug TEXT UNIQUE NOT NULL,title TEXT NOT NULL,event_type TEXT NOT NULL,description TEXT,starts_at TEXT NOT NULL,ends_at TEXT,asset_type TEXT,asset_id TEXT,ppv_price_cents INTEGER NOT NULL DEFAULT 0,sponsor_id TEXT,status TEXT NOT NULL DEFAULT 'scheduled',aftershow_asset_id TEXT,metadata_json TEXT NOT NULL DEFAULT '{}');
+CREATE TABLE IF NOT EXISTS event_chat(id TEXT PRIMARY KEY,event_id TEXT NOT NULL REFERENCES live_events(id) ON DELETE CASCADE,user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,message TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'visible',created_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS ppv_entitlements(id TEXT PRIMARY KEY,user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,event_id TEXT NOT NULL REFERENCES live_events(id) ON DELETE CASCADE,payment_reference TEXT,status TEXT NOT NULL DEFAULT 'active',created_at TEXT NOT NULL,UNIQUE(user_id,event_id));
+CREATE TABLE IF NOT EXISTS gift_codes(id TEXT PRIMARY KEY,code TEXT UNIQUE NOT NULL,value_cents INTEGER NOT NULL,months INTEGER NOT NULL DEFAULT 0,status TEXT NOT NULL DEFAULT 'active',purchaser_user_id TEXT,redeemed_by_user_id TEXT,redeemed_at TEXT,expires_at TEXT,created_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS creators(id TEXT PRIMARY KEY,slug TEXT UNIQUE NOT NULL,name TEXT NOT NULL,bio TEXT,avatar_url TEXT,ownership_policy TEXT NOT NULL DEFAULT 'creator-friendly',created_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS creator_titles(creator_id TEXT NOT NULL REFERENCES creators(id) ON DELETE CASCADE,asset_type TEXT NOT NULL,asset_id TEXT NOT NULL,ownership_percent REAL,watchable_percent REAL,deal_json TEXT NOT NULL DEFAULT '{}',PRIMARY KEY(creator_id,asset_type,asset_id));
+CREATE TABLE IF NOT EXISTS fan_clubs(id TEXT PRIMARY KEY,creator_id TEXT NOT NULL REFERENCES creators(id) ON DELETE CASCADE,name TEXT NOT NULL,monthly_price_cents INTEGER NOT NULL DEFAULT 0,benefits_json TEXT NOT NULL DEFAULT '{}',created_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS fan_memberships(id TEXT PRIMARY KEY,fan_club_id TEXT NOT NULL REFERENCES fan_clubs(id),user_id TEXT NOT NULL REFERENCES users(id),status TEXT NOT NULL DEFAULT 'active',created_at TEXT NOT NULL,UNIQUE(fan_club_id,user_id));
+CREATE TABLE IF NOT EXISTS creator_revenue_events(id TEXT PRIMARY KEY,creator_id TEXT NOT NULL REFERENCES creators(id),asset_type TEXT,asset_id TEXT,revenue_type TEXT NOT NULL,gross_cents INTEGER NOT NULL,creator_cents INTEGER NOT NULL,watchable_cents INTEGER NOT NULL,reference TEXT,created_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS creator_financing(id TEXT PRIMARY KEY,creator_id TEXT NOT NULL REFERENCES creators(id),project_name TEXT NOT NULL,financing_type TEXT NOT NULL,amount_cents INTEGER NOT NULL,status TEXT NOT NULL DEFAULT 'proposed',terms_json TEXT NOT NULL DEFAULT '{}',created_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS franchises(id TEXT PRIMARY KEY,name TEXT NOT NULL,origin_asset_type TEXT,origin_asset_id TEXT,owner_json TEXT NOT NULL DEFAULT '{}',created_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS franchise_rights(id TEXT PRIMARY KEY,franchise_id TEXT NOT NULL REFERENCES franchises(id) ON DELETE CASCADE,right_type TEXT NOT NULL,territory TEXT NOT NULL DEFAULT 'WORLD',owner TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'available',terms_json TEXT NOT NULL DEFAULT '{}');
+CREATE TABLE IF NOT EXISTS sponsors(id TEXT PRIMARY KEY,name TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'prospect',contact_json TEXT NOT NULL DEFAULT '{}',created_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS sponsorships(id TEXT PRIMARY KEY,sponsor_id TEXT NOT NULL REFERENCES sponsors(id),placement_type TEXT NOT NULL,target_type TEXT,target_id TEXT,value_cents INTEGER NOT NULL DEFAULT 0,starts_at TEXT,ends_at TEXT,status TEXT NOT NULL DEFAULT 'proposed',metadata_json TEXT NOT NULL DEFAULT '{}');
+CREATE TABLE IF NOT EXISTS ad_campaigns(id TEXT PRIMARY KEY,name TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'draft',creative_url TEXT NOT NULL,click_url TEXT,qr_payload TEXT,ad_type TEXT NOT NULL DEFAULT 'national',starts_at TEXT,ends_at TEXT,target_json TEXT NOT NULL DEFAULT '{}',created_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS ad_inventory_rights(id TEXT PRIMARY KEY,source_id TEXT REFERENCES content_sources(id),asset_type TEXT,asset_id TEXT,owner TEXT NOT NULL,inventory_percent REAL NOT NULL DEFAULT 0,replaceable INTEGER NOT NULL DEFAULT 0,terms_json TEXT NOT NULL DEFAULT '{}');
+CREATE TABLE IF NOT EXISTS ad_impressions(id TEXT PRIMARY KEY,campaign_id TEXT NOT NULL REFERENCES ad_campaigns(id),user_id TEXT REFERENCES users(id),asset_type TEXT,asset_id TEXT,event_type TEXT NOT NULL,created_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS takedowns(id TEXT PRIMARY KEY,asset_type TEXT NOT NULL,asset_id TEXT NOT NULL,reason TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'active',created_at TEXT NOT NULL,resolved_at TEXT);
+CREATE TABLE IF NOT EXISTS rights_provenance(id TEXT PRIMARY KEY,asset_type TEXT NOT NULL,asset_id TEXT NOT NULL,licensor TEXT,contract_reference TEXT,rights_json TEXT NOT NULL DEFAULT '{}',verified_at TEXT,expires_at TEXT,created_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS fraud_events(id TEXT PRIMARY KEY,user_id TEXT,device_id TEXT,event_type TEXT NOT NULL,risk_score REAL NOT NULL DEFAULT 0,detail_json TEXT NOT NULL DEFAULT '{}',status TEXT NOT NULL DEFAULT 'open',created_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS audit_events(id TEXT PRIMARY KEY,actor_user_id TEXT,action TEXT NOT NULL,target_type TEXT,target_id TEXT,detail_json TEXT NOT NULL DEFAULT '{}',created_at TEXT NOT NULL);
+`);}
+export function closeDb(){if(db)db.close();db=undefined;}
