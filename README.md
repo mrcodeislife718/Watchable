@@ -1,265 +1,414 @@
-# Watchable
+# Watchable TV
 
-**A TV and film streaming service platform.**
+**A custom-built premium television streaming service.**
 
-> **Movies + TV + Sports + Daytime + Live TV**
+> **Live TV + Premium Channels + Sports + Movies + Shows + DVR — $75/month**
 
-Watchable is a competitive streaming platform built around television, film, original programming, licensed entertainment, live viewing, sports, and premium screen content.
+Watchable TV is a fully owned subscription television platform designed as a modern cable-TV alternative. The customer pays **$75 per month, upfront**, with **no free trial**. The core service includes live television, premium programming, selected national sports, movies, series, VOD, DVR, a unified guide, search, profiles, and multi-device access.
 
-TV shows and films are the foundation of the service and are intended to represent approximately **60–70% of the platform’s content direction**. Creator tools, content operations, advertising systems, rights management, and analytics support that streaming business; they do not replace its identity.
+Watchable TV is not a white-label IPTV service and does not depend on third-party media-player products. The customer experience, account system, billing, guide, entitlement logic, playback authorization, advertising systems, sales attribution, analytics, and supported client applications are Watchable-owned software.
 
-## Mission
-
-Watchable is designed to build a major entertainment destination that combines the accessibility of free ad-supported streaming with the depth, quality, and convenience of premium television and film services.
-
-Its goals are to:
-
-- provide a full TV and film streaming experience across supported devices;
-- launch with a strong free, advertising-supported model while supporting premium access;
-- develop Watchable Originals and acquire licensed programming;
-- support movies, episodic television, live channels, sports, events, and pay-per-view content;
-- create fairer and more transparent economics for creators, producers, and rights holders;
-- make Black culture a flagship engine of the service while expanding opportunities for Black, Latino, Asian American, and other underserved creators;
-- combine entertainment, audience growth, advertising, subscriptions, licensing, and original production inside one scalable platform.
-
-## Entertainment scope
-
-Watchable is designed to support:
-
-- movies;
-- television shows;
-- Watchable Originals;
-- licensed programming;
-- documentaries;
-- reality television;
-- stand-up and sketch programming;
-- pay-per-view content;
-- theatrical releases;
-- sports and live events;
-- daytime television;
-- live television channels.
-
-## Service model
-
-Watchable combines multiple proven streaming models without reducing the product to any single one:
-
-- a Netflix- and Amazon-style on-demand viewing experience;
-- a Tubi-style free, advertising-supported launch strategy;
-- subscription and premium access where appropriate;
-- pay-per-view and event-based access;
-- live channels, daytime programming, sports, and events;
-- original-production revenue;
-- content licensing and distribution;
-- advertising and brand partnerships;
-- transparent creator and producer participation.
-
-## Intended platform architecture
+## Core commercial offer
 
 ```text
-Viewer applications
+WATCHABLE TV
+$75/month
+Paid upfront
+No free trial
+Advertising-supported
+Premium programming included
+```
+
+The $75 service is intended to include:
+
+- live television;
+- ad-supported HBO / Max programming or equivalent licensed premium rights;
+- STARZ;
+- Paramount+ / SHOWTIME programming or equivalent licensed premium rights;
+- selected high-value national sports;
+- entertainment, news, lifestyle, family, and cultural programming;
+- FAST channels;
+- licensed movies and television on demand;
+- cloud DVR;
+- a unified electronic program guide;
+- search and discovery;
+- profiles, favorites, and continue watching;
+- supported multi-device viewing.
+
+Premium programming is part of the core Watchable TV proposition rather than a collection of customer-paid add-ons.
+
+## Customer access
+
+One Watchable TV subscription is designed to work across multiple Watchable-owned clients.
+
+```text
+Watchable Account
+├── Web app
+├── iPhone / Android app
+├── Smart-TV apps
+└── Watchable Streamer
+```
+
+### Web
+
+Customers can subscribe, sign in, browse, and watch through the Watchable web application.
+
+### Mobile
+
+Watchable Mobile provides the same account, entitlements, guide, profiles, watch history, and playback experience on supported phones and tablets.
+
+### Smart TVs
+
+Watchable builds and maintains its own applications for supported modern smart-TV platforms. Smart-TV apps are distribution surfaces for Watchable TV; they do not define or control the service.
+
+### Watchable Streamer
+
+For non-smart televisions and older smart televisions that cannot adequately run Watchable software, Watchable can provide or sell a dedicated streaming device containing the compute, networking, operating environment, playback software, and HDMI output needed to run Watchable TV.
+
+The streamer is optional hardware. **The subscription service is the product.**
+
+## Platform ownership
+
+Watchable owns the customer-facing and operational software stack.
+
+```text
+Viewer clients
 ├── Web
 ├── Mobile
 ├── Smart TV
-├── Streaming-device applications
-└── Partner and embedded experiences
-              │
-              ▼
-Identity, profiles, and access
-├── Accounts and profiles
-├── Household and device management
-├── Watchlists and viewing history
-├── Entitlements and subscriptions
-└── Parental, privacy, and accessibility settings
-              │
-              ▼
-Catalog and discovery
-├── Movies and television catalog
-├── Seasons, episodes, franchises, and collections
-├── Search and browse
-├── Editorial programming
-├── Recommendations
-└── Live guide and event discovery
-              │
-              ▼
-Playback and delivery
-├── Video playback
-├── Live streaming
-├── Adaptive delivery
-├── Captions, audio, and accessibility tracks
+└── Watchable Streamer
+        │
+        ▼
+Watchable identity and accounts
+├── Customers
+├── Households
+├── Profiles
+├── Devices
+├── Sessions
+└── Subscription state
+        │
+        ▼
+Watchable content control plane
+├── Catalog
+├── Channels
+├── Programs
+├── VOD assets
+├── Collections
+├── EPG
+├── Rights
+└── Entitlements
+        │
+        ▼
+Watchable playback layer
 ├── Playback authorization
-└── Device-session management
-              │
-              ▼
-Monetization
-├── Advertising-supported viewing
-├── Subscriptions and premium access
-├── Pay-per-view
-├── Sponsorships and brand partnerships
-├── Licensing and distribution
-└── Revenue attribution
-              │
-              ▼
-Content and rights operations
-├── Studio and licensor intake
-├── Media and metadata management
-├── Editorial and technical review
-├── Rights, territories, windows, and terms
-├── Release scheduling
-├── Royalties and participation
-└── Takedown, expiration, and renewal
-              │
-              ▼
-Audience and business intelligence
-├── Viewing and engagement analytics
-├── Advertising performance
-├── Subscriber conversion and retention
-├── Title and catalog performance
-├── Revenue reporting
-└── Programming and acquisition intelligence
+├── Secure session issuance
+├── DRM integration where required
+├── Concurrent-stream controls
+├── Geo/territory enforcement
+├── DVR
+└── Playback health
+        │
+        ▼
+Watchable monetization
+├── $75 recurring subscription
+├── Advertising
+├── Sales attribution
+├── Residual commissions
+└── Revenue analytics
 ```
 
-## Viewer experience
+## Content procurement model
 
-The intended viewer experience includes:
+Watchable TV acquires authorized programming as inventory while retaining ownership of the platform.
 
-- catalog browsing across movies, shows, genres, collections, channels, and events;
-- title, series, season, episode, cast, and contributor pages;
-- personalized watchlists and viewing history;
-- continue-watching workflows;
-- search, recommendations, and editorial collections;
-- secure on-demand and live playback;
-- captions, transcripts, audio options, and accessibility metadata;
-- account, subscription, entitlement, and device management;
-- ad-supported, premium, and pay-per-view access paths;
-- responsive experiences across supported viewing surfaces.
-
-## Live, sports, and event programming
-
-Watchable is intended to support scheduled and real-time entertainment alongside on-demand content.
+The preferred procurement model is:
 
 ```text
-Live channels
-Sports programming
-Daytime television
-Premieres and special events
-Pay-per-view events
-Theatrical and limited-window releases
-Live creator and cultural programming
+Licensed content owners
+        │
+        ▼
+Licensed programming aggregators / distributors
+        │
+        ▼
+Watchable ingestion + rights layer
+        │
+        ▼
+Watchable TV
 ```
 
-The live system requires schedule management, channel and event metadata, entitlement checks, playback authorization, advertising insertion support, concurrency controls, and operational monitoring.
+Watchable prioritizes legitimate programming aggregators that can supply multiple authorized U.S. channels, premium rights, FAST channels, VOD libraries, metadata, and/or sports through a small number of commercial relationships.
 
-## Content acquisition and originals
+Direct programmer negotiations are used selectively when an important content property cannot be obtained economically through aggregation.
 
-Watchable’s content supply model includes:
+A supplier is an inventory source, **not the Watchable platform**.
 
-- Watchable-produced original movies and series;
-- licensed television and film catalogs;
-- independent productions;
-- documentaries and unscripted programming;
-- sports and event rights;
-- theatrical and premium-window releases;
-- partnerships with studios, producers, distributors, creators, and cultural institutions.
+## Normalized content-source model
 
-Originals and licensed programming are governed through title, asset, contributor, ownership, territory, term, release-window, usage, revenue-participation, and expiration records.
-
-## Content lifecycle
+Watchable normalizes external programming into a small set of internal source classes.
 
 ```text
-Studio, producer, or licensor intake
-    -> rights and contributor records
-    -> media and metadata delivery
-    -> technical, editorial, and accessibility review
-    -> advertising and entitlement configuration
-    -> release scheduling
-    -> publication to on-demand, live, or event surfaces
-    -> audience engagement and monetization
-    -> revenue attribution and reporting
-    -> renewal, relicensing, archive, or takedown
+LICENSED_LINEAR
+PREMIUM
+FAST_AVOD
+VOD
+LOCAL_OTA
 ```
 
-## Creator and producer economics
+Every external supplier maps into Watchable-owned channel, program, asset, rights, and playback contracts so suppliers can be added or replaced without redesigning the customer experience.
 
-Watchable is intended to improve the relationship between a streaming platform and the people who create its programming.
+## Programming economics
 
-The operating direction includes:
+Watchable is designed backward from the fixed **$75 monthly retail price**.
 
-- clearer ownership and licensing records;
-- transparent participation terms;
-- title- and agreement-level revenue attribution;
-- creator and producer reporting;
-- advertising, subscription, licensing, sponsorship, and pay-per-view revenue participation;
-- direct support for independent and underserved creators;
-- opportunities for Black, Latino, Asian American, and other underrepresented voices;
-- Black culture as a flagship programming and commercial engine rather than a secondary category.
+The current internal programming objective is approximately:
+
+```text
+Total programming target: $20–$25 per active subscriber/month
+```
+
+This is a private commercial target rather than a claimed market wholesale rate.
+
+The content architecture is intended to concentrate programming spend on the content most likely to acquire and retain customers while using lower-cost, ad-supported, revenue-share, FAST, VOD, and locally received inventory to create breadth.
+
+### Premium anchors
+
+Watchable targets ad-supported wholesale forms of premium programming where available, because the service itself contains advertising and does not require the added cost of ad-free consumer versions.
+
+### Paid live television
+
+Watchable buys a curated group of high-value live networks rather than reproducing every low-value channel in a traditional cable bundle.
+
+### Sports
+
+Sports rights are selected according to customer-acquisition and retention value per programming dollar. Watchable does not assume that every regional sports network, league network, or secondary sports channel belongs in the base package.
+
+### FAST / AVOD
+
+FAST and ad-supported VOD provide substantial catalog and guide breadth without traditional per-channel cable economics. Advertising inventory is monetized only where Watchable's distribution agreement explicitly permits it.
+
+### Local television
+
+Where technically and legally appropriate, Watchable can integrate a household's own over-the-air local reception into the Watchable guide rather than retransmitting the local station itself. This can provide a unified local-channel experience while avoiding unnecessary recurring retransmission expense.
+
+## Rights engine
+
+Watchable treats every content asset as a rights-bearing commercial object.
+
+Each licensed asset or channel can carry records such as:
+
+```text
+supplier
+territory
+linear_rights
+vod_rights
+dvr_rights
+catchup_rights
+device_rules
+concurrent_stream_limit
+start_date
+expiration_date
+subscriber_rate
+minimum_commitment
+ad_inventory_terms
+```
+
+Playback occurs only when the customer's subscription and the applicable content rights permit it.
+
+## Unified guide
+
+The Watchable guide is source-independent.
+
+A customer may see licensed streams, premium programming, FAST channels, VOD, and locally received OTA channels inside one experience even though those assets originate from different authorized sources.
+
+```text
+HOME
+LIVE
+SPORTS
+PREMIUM
+MOVIES
+SHOWS
+DVR
+SEARCH
+```
+
+Customers should not need to understand content suppliers, feed formats, playlist URLs, or separate media-player applications.
+
+## Billing
+
+The core commercial flow is:
+
+```text
+Customer selects Watchable TV
+    -> pays $75 upfront
+    -> account becomes active
+    -> entitlements are issued
+    -> customer watches on supported Watchable clients
+    -> recurring billing maintains access
+```
+
+There is no launch free-trial requirement in the Watchable TV model.
+
+Failed, refunded, disputed, canceled, or expired subscriptions are reflected in entitlement state and downstream commission calculations.
+
+## Sales and affiliates
+
+Watchable is designed for direct sales, field sales, professional sales representatives, affiliates, referrals, and digital acquisition.
+
+Every customer can be associated with an originating salesperson or affiliate.
+
+```text
+Salesperson / affiliate
+    -> customer signup
+    -> successful $75 payment
+    -> active subscription
+    -> residual commission ledger
+```
+
+The intended compensation model uses recurring percentage-based residuals on successfully collected subscription revenue while the originated customer remains active. Final commission percentages remain a commercial configuration rather than a hard-coded platform assumption.
+
+The platform tracks:
+
+- originating rep or affiliate;
+- subscriber status;
+- payments actually collected;
+- commission rate;
+- residual amount;
+- reversals and chargebacks;
+- cancellations;
+- payout history;
+- retention by salesperson.
+
+## Advertising
+
+Watchable TV is advertising-supported even though it is a paid service.
+
+Potential advertising inventory includes:
+
+- Watchable-owned advertising surfaces;
+- permitted FAST inventory;
+- permitted VOD inventory;
+- sponsorships;
+- local advertising;
+- programmatic advertising;
+- branded programming.
+
+Watchable only inserts or replaces advertising where the applicable rights agreement permits it.
 
 ## Revenue architecture
 
-Watchable is designed as a multi-revenue entertainment service.
-
 ```text
-Advertising-supported streaming
-Subscriptions and premium access
-Pay-per-view
-Sports and live-event access
-Advertising and sponsorships
-Original programming
-Content licensing
-Partner distribution
-Brand-supported programming
-Catalog and format licensing
+Primary
+└── $75/month Watchable TV subscription
+
+Secondary
+├── Advertising
+├── Sponsorships
+├── Future original programming
+├── Future content licensing
+└── Optional hardware revenue
 ```
 
-Revenue records are intended to remain associated with the relevant title, episode, live event, agreement, rights holder, campaign, distribution channel, territory, and reporting period.
+The primary launch business is the recurring Watchable TV subscription rather than hardware sales or a free streaming tier.
 
-## Rights and provenance
+## Operating economics
 
-Watchable treats every title and media asset as a rights-bearing commercial property.
+An illustrative internal model is:
 
-- title and asset ownership records;
-- contributor and credit history;
-- license term and territory information;
-- release windows and distribution permissions;
-- source-asset and version lineage;
-- publication, expiration, and takedown history;
-- agreement and royalty references;
-- sponsor and campaign relationships;
-- audit records for consequential content and commercial changes.
+```text
+$75.00  subscription revenue
+- sales residual
+- programming cost
+- payments / delivery / support
++ advertising contribution
+= Watchable contribution per subscriber
+```
 
-## Trust, safety, and accessibility
+Using a 20% salesperson residual, $22 programming target, and $6 variable payment/delivery/support assumption as an example:
 
-- Role-based operational access
-- Controlled publishing authority
-- Secure playback and entitlement checks
-- Rights, expiration, and takedown controls
-- Content-review and escalation workflows
-- Captions, audio options, transcripts, and accessibility metadata
-- Age, parental, and content-rating controls
-- Versioned content and asset history
-- Privacy-aware audience analytics
-- Human authority over consequential programming, rights, and commercial decisions
+```text
+$75 - $15 - $22 - $6 = $32
+```
 
-## Commercial direction
+That $32 figure is a planning scenario, not a guaranteed margin. Actual programming, infrastructure, payment, support, advertising, tax, hardware, refund, and acquisition economics determine realized contribution.
 
-Watchable is designed for audiences, studios, independent producers, rights holders, advertisers, sponsors, distributors, creators, and cultural partners.
+## Customer experience standard
 
-The intended business outcome is a scalable entertainment company with:
+The intended Watchable TV experience is simple:
 
-- a large TV and film catalog;
-- a free ad-supported audience funnel;
-- premium subscription and event revenue;
-- original programming and recognizable franchises;
-- live channels, sports, daytime, and special events;
-- strong advertising and brand-partnership capabilities;
-- fairer economics for creators and producers;
-- a distinct Black- and Latino-owned identity with global audience potential.
+```text
+Subscribe
+    -> Pay $75
+    -> Sign in
+    -> Watch
+```
+
+The customer should not need to configure playlists, M3U URLs, EPG URLs, developer settings, third-party IPTV players, or content-provider credentials merely to use the core Watchable service.
+
+## Launch priorities
+
+Watchable TV's first commercial release is not complete until the following chain works end to end:
+
+```text
+Customer acquisition
+    -> $75 payment
+    -> account activation
+    -> salesperson attribution
+    -> device/session activation
+    -> catalog + EPG
+    -> authorized playback
+    -> VOD / live / premium access
+    -> DVR
+    -> advertising
+    -> recurring billing
+    -> residual commission accounting
+    -> support + operational monitoring
+```
+
+## Distribution expansion
+
+Watchable does not wait for every smart-TV store to approve an application before the company can exist.
+
+The platform can launch through supported web, mobile, direct-install, and Watchable Streamer surfaces while smart-TV distribution expands in parallel.
+
+Future supported surfaces can include:
+
+- Samsung smart TVs;
+- LG webOS TVs;
+- Android / Google TV;
+- Roku;
+- Apple TV;
+- additional connected-TV platforms.
+
+## Future home internet
+
+Watchable TV may later be paired with a separate Watchable home-internet offering. Internet is not required for the initial television-platform launch architecture and should not delay Watchable TV's first revenue.
+
+## Commercial completion standard
+
+Watchable TV is commercially complete only when it has:
+
+- working custom software;
+- real subscriber billing;
+- real licensed programming;
+- proven rights enforcement;
+- reliable playback;
+- supported customer devices;
+- advertising operations;
+- sales attribution and residual accounting;
+- customer support and operational monitoring;
+- deployment readiness;
+- documented unit economics;
+- paying customers;
+- retention evidence.
 
 ## Repository boundary
 
-This repository is the controlled public product, architecture, service, and technical-documentation surface for Watchable. Proprietary production source, media-processing workflows, recommendation logic, advertising systems, commercial agreements, customer data, rights data, and deployment assets are maintained privately.
+This repository is the controlled public product, architecture, service, and technical-documentation surface for Watchable TV.
+
+Proprietary production source code, customer data, confidential programming agreements, supplier rate sheets, private cost ceilings, advertising contracts, security material, deployment secrets, and other sensitive commercial assets should remain in private systems.
 
 ## Ownership and licensing
 
-Watchable is independently designed and developed by **Charles Castillo**, Software Engineer and AI Systems Engineer.
+Watchable TV is independently designed and developed by **Charles Castillo**, Software Engineer and AI Systems Engineer.
 
 All rights reserved. No source, architecture, branding, content, documentation, programming, distribution, or commercial rights are granted without explicit written authorization.
