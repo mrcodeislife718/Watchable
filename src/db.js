@@ -1,10 +1,5 @@
-import fs from 'node:fs';
-import path from 'node:path';
-import { DatabaseSync } from 'node:sqlite';
-import { config } from './config.js';
-
-let db;
-export function getDb(){if(db)return db;fs.mkdirSync(path.dirname(config.databasePath),{recursive:true});db=new DatabaseSync(config.databasePath);db.exec('PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;');migrate(db);return db;}
+import fs from 'node:fs';import path from 'node:path';import{DatabaseSync}from'node:sqlite';import{config}from'./config.js';let db;export function getDb(){if(db)return db;fs.mkdirSync(path.dirname(config.databasePath),{recursive:true});db=new DatabaseSync(config.databasePath);db.exec('PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;');migrate(db);return db}
+function column(database,table,name,definition){const exists=database.prepare(`PRAGMA table_info(${table})`).all().some(x=>x.name===name);if(!exists)database.exec(`ALTER TABLE ${table} ADD COLUMN ${name} ${definition}`)}
 function migrate(database){database.exec(`
 CREATE TABLE IF NOT EXISTS users(id TEXT PRIMARY KEY,email TEXT UNIQUE NOT NULL,password_hash TEXT NOT NULL,display_name TEXT NOT NULL,role TEXT NOT NULL DEFAULT 'customer',created_at TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS sessions(token_hash TEXT PRIMARY KEY,user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,expires_at TEXT NOT NULL,created_at TEXT NOT NULL);
@@ -46,5 +41,7 @@ CREATE TABLE IF NOT EXISTS takedowns(id TEXT PRIMARY KEY,asset_type TEXT NOT NUL
 CREATE TABLE IF NOT EXISTS rights_provenance(id TEXT PRIMARY KEY,asset_type TEXT NOT NULL,asset_id TEXT NOT NULL,licensor TEXT,contract_reference TEXT,rights_json TEXT NOT NULL DEFAULT '{}',verified_at TEXT,expires_at TEXT,created_at TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS fraud_events(id TEXT PRIMARY KEY,user_id TEXT,device_id TEXT,event_type TEXT NOT NULL,risk_score REAL NOT NULL DEFAULT 0,detail_json TEXT NOT NULL DEFAULT '{}',status TEXT NOT NULL DEFAULT 'open',created_at TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS audit_events(id TEXT PRIMARY KEY,actor_user_id TEXT,action TEXT NOT NULL,target_type TEXT,target_id TEXT,detail_json TEXT NOT NULL DEFAULT '{}',created_at TEXT NOT NULL);
-`);}
-export function closeDb(){if(db)db.close();db=undefined;}
+`);
+for(const [t,n,d]of[['devices','device_fingerprint','TEXT'],['profiles','max_rating','TEXT'],['profiles','preferred_languages',"TEXT NOT NULL DEFAULT '[]'"],['profiles','accessibility_json',"TEXT NOT NULL DEFAULT '{}'"],['profiles','pin_hash','TEXT'],['channels','backup_playback_urls',"TEXT NOT NULL DEFAULT '[]'"],['programs','metadata_json',"TEXT NOT NULL DEFAULT '{}'"],['vod_assets','backup_playback_urls',"TEXT NOT NULL DEFAULT '[]'"],['playback_sessions','device_id','TEXT'],['playback_sessions','watermark_token','TEXT'],['watch_events','metadata_json',"TEXT NOT NULL DEFAULT '{}'"],['ad_campaigns','qr_payload','TEXT'],['ad_campaigns','ad_type',"TEXT NOT NULL DEFAULT 'national'"]])column(database,t,n,d);
+database.exec('CREATE INDEX IF NOT EXISTS idx_playback_user_expiry ON playback_sessions(user_id,expires_at);CREATE INDEX IF NOT EXISTS idx_rights_expiry ON rights_provenance(expires_at);CREATE INDEX IF NOT EXISTS idx_watch_user_asset ON watch_events(user_id,asset_type,asset_id);CREATE INDEX IF NOT EXISTS idx_events_start ON live_events(starts_at);');}
+export function closeDb(){if(db)db.close();db=undefined}
