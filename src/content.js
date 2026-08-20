@@ -1,76 +1,17 @@
-import { getDb } from './db.js';
-import { config } from './config.js';
-import { id, now, sign, parseJson } from './util.js';
-import { isEntitled } from './billing.js';
-
-export const ADAPTER_TYPES = ['LICENSED_LINEAR','PREMIUM','FAST_AVOD','VOD','LOCAL_OTA'];
-
-export function listChannels({ category, premium, sports } = {}) {
-  const db = getDb();
-  let sql = 'SELECT * FROM channels WHERE active=1'; const args=[];
-  if (category) { sql += ' AND category=?'; args.push(category); }
-  if (premium !== undefined) { sql += ' AND premium=?'; args.push(premium ? 1 : 0); }
-  if (sports !== undefined) { sql += ' AND sports=?'; args.push(sports ? 1 : 0); }
-  sql += ' ORDER BY category,name';
-  return db.prepare(sql).all(...args).map(normalizeChannel);
-}
-
-export function listVod() {
-  return getDb().prepare('SELECT * FROM vod_assets WHERE active=1 ORDER BY title').all().map(row => ({...row, premium: !!row.premium, metadata: parseJson(row.metadata_json)}));
-}
-
-export function guide({ hours = 6 } = {}) {
-  const start = new Date(Date.now() - 30 * 60000).toISOString();
-  const end = new Date(Date.now() + Math.min(hours,24) * 3600000).toISOString();
-  const channels = listChannels();
-  const db = getDb();
-  return channels.map(channel => ({ channel, programs: db.prepare('SELECT * FROM programs WHERE channel_id=? AND ends_at>? AND starts_at<? ORDER BY starts_at').all(channel.id,start,end) }));
-}
-
-function normalizeChannel(row) {
-  return {...row, premium: !!row.premium, sports: !!row.sports, active: !!row.active, metadata: parseJson(row.metadata_json)};
-}
-
-function rightsValid(row, country='US') {
-  if (row.territories && !row.territories.split(',').map(v=>v.trim()).includes(country)) return false;
-  if (row.rights_start && Date.parse(row.rights_start) > Date.now()) return false;
-  if (row.rights_end && Date.parse(row.rights_end) <= Date.now()) return false;
-  return true;
-}
-
-export function createPlaybackSession({ userId, assetType, assetId, country='US' }) {
-  if (!isEntitled(userId)) throw Object.assign(new Error('Active Watchable TV subscription required'), { statusCode: 402 });
-  const db = getDb();
-  const table = assetType === 'channel' ? 'channels' : assetType === 'vod' ? 'vod_assets' : null;
-  if (!table) throw Object.assign(new Error('Unsupported asset type'), { statusCode: 400 });
-  const asset = db.prepare(`SELECT * FROM ${table} WHERE id=? AND active=1`).get(assetId);
-  if (!asset) throw Object.assign(new Error('Asset not found'), { statusCode: 404 });
-  if (!rightsValid(asset,country)) throw Object.assign(new Error('Content rights unavailable in this territory or window'), { statusCode: 451 });
-  if (!asset.playback_url) throw Object.assign(new Error('Playback source not provisioned'), { statusCode: 503 });
-  const playbackId = id('play');
-  const expiresAt = new Date(Date.now()+10*60000).toISOString();
-  db.prepare('INSERT INTO playback_sessions (id,user_id,asset_type,asset_id,expires_at,created_at) VALUES (?,?,?,?,?,?)').run(playbackId,userId,assetType,assetId,expiresAt,now());
-  const payload = `${playbackId}.${userId}.${assetType}.${assetId}.${expiresAt}`;
-  return { id: playbackId, playbackUrl: asset.playback_url, playbackType: asset.playback_type, expiresAt, token: `${Buffer.from(payload).toString('base64url')}.${sign(payload,config.playbackSigningSecret)}` };
-}
-
-export function scheduleRecording(userId, programId) {
-  if (!isEntitled(userId)) throw Object.assign(new Error('Active subscription required'), { statusCode: 402 });
-  const db = getDb();
-  const program = db.prepare('SELECT * FROM programs WHERE id=?').get(programId);
-  if (!program) throw Object.assign(new Error('Program not found'), { statusCode: 404 });
-  const recording = { id: id('rec'), userId, programId, status: 'scheduled', createdAt: now() };
-  db.prepare('INSERT INTO dvr_recordings (id,user_id,program_id,status,created_at) VALUES (?,?,?,?,?)').run(recording.id,userId,programId,recording.status,recording.createdAt);
-  return recording;
-}
-
-export function listRecordings(userId) {
-  return getDb().prepare(`SELECT d.id,d.status,d.created_at,p.title,p.starts_at,p.ends_at,c.name channel_name FROM dvr_recordings d JOIN programs p ON p.id=d.program_id JOIN channels c ON c.id=p.channel_id WHERE d.user_id=? ORDER BY p.starts_at DESC`).all(userId);
-}
-
-export function registerSource({ name, adapterType, configJson = {}, rightsVerified = false, status = 'inactive' }) {
-  if (!ADAPTER_TYPES.includes(adapterType)) throw new Error('Invalid adapter type');
-  const sourceId=id('src');
-  getDb().prepare('INSERT INTO content_sources (id,name,adapter_type,status,rights_verified,config_json,created_at) VALUES (?,?,?,?,?,?,?)').run(sourceId,name,adapterType,status,rightsVerified?1:0,JSON.stringify(configJson),now());
-  return sourceId;
-}
+import {getDb} from './db.js';import {config} from './config.js';import {id,now,sign,parseJson} from './util.js';import {isEntitled} from './billing.js';
+export const ADAPTER_TYPES=['LICENSED_LINEAR','PREMIUM','FAST_AVOD','VOD','LOCAL_OTA'];
+const norm=r=>({...r,premium:!!r.premium,sports:!!r.sports,active:!!r.active,metadata:parseJson(r.metadata_json),backupPlaybackUrls:parseJson(r.backup_playback_urls,[])});
+function blocked(type,assetId){return !!getDb().prepare("SELECT 1 FROM takedowns WHERE asset_type=? AND asset_id=? AND status='active' LIMIT 1").get(type,assetId)}
+function sourceValid(sourceId){if(!sourceId)return true;const s=getDb().prepare('SELECT status,rights_verified FROM content_sources WHERE id=?').get(sourceId);return !!s&&s.status==='active'&&s.rights_verified===1}
+function rightsValid(r,country='US'){const ts=Date.now();if(r.territories&&!String(r.territories).split(',').map(x=>x.trim()).includes(country))return false;if(r.rights_start&&Date.parse(r.rights_start)>ts)return false;if(r.rights_end&&Date.parse(r.rights_end)<=ts)return false;const p=getDb().prepare('SELECT * FROM rights_provenance WHERE asset_type=? AND asset_id=? ORDER BY created_at DESC LIMIT 1').get(r.kind?'vod':'channel',r.id);if(p&&(!p.verified_at||(p.expires_at&&Date.parse(p.expires_at)<=ts)))return false;return true}
+export function listChannels({category,premium,sports}={}){let sql='SELECT * FROM channels WHERE active=1',a=[];if(category){sql+=' AND category=?';a.push(category)}if(premium!==undefined){sql+=' AND premium=?';a.push(premium?1:0)}if(sports!==undefined){sql+=' AND sports=?';a.push(sports?1:0)}return getDb().prepare(sql+' ORDER BY category,name').all(...a).filter(r=>!blocked('channel',r.id)&&sourceValid(r.source_id)).map(norm)}
+export function listVod(){return getDb().prepare('SELECT * FROM vod_assets WHERE active=1 ORDER BY title').all().filter(r=>!blocked('vod',r.id)&&sourceValid(r.source_id)).map(norm)}
+export function guide({hours=6}={}){const start=new Date(Date.now()-1800000).toISOString(),end=new Date(Date.now()+Math.min(hours,24)*3600000).toISOString(),db=getDb();return listChannels().map(channel=>({channel,programs:db.prepare('SELECT * FROM programs WHERE channel_id=? AND ends_at>? AND starts_at<? ORDER BY starts_at').all(channel.id,start,end)}))}
+function ensureDevice(userId,deviceId,platform='unknown'){if(!deviceId)return;const db=getDb(),existing=db.prepare('SELECT * FROM devices WHERE id=? AND user_id=?').get(deviceId,userId);if(existing){db.prepare('UPDATE devices SET last_seen_at=? WHERE id=?').run(now(),deviceId);return}const count=db.prepare('SELECT COUNT(*) n FROM devices WHERE user_id=?').get(userId).n;if(count>=config.maxDevices)throw Object.assign(new Error('Household device limit reached'),{statusCode:429});db.prepare('INSERT INTO devices(id,user_id,name,platform,device_fingerprint,last_seen_at,created_at) VALUES(?,?,?,?,?,?,?)').run(deviceId,userId,platform,platform,deviceId,now(),now())}
+function enforceConcurrent(userId){const cutoff=new Date(Date.now()-config.playbackSessionMinutes*60000).toISOString(),active=getDb().prepare('SELECT COUNT(*) n FROM playback_sessions WHERE user_id=? AND expires_at>?').get(userId,cutoff).n;if(active>=config.maxConcurrentStreams)throw Object.assign(new Error('Concurrent stream limit reached'),{statusCode:429})}
+export function createPlaybackSession({userId,assetType,assetId,country='US',deviceId=null,platform='unknown',profileId=null}){if(!isEntitled(userId))throw Object.assign(new Error('Active Watchable TV subscription required'),{statusCode:402});const db=getDb(),table=assetType==='channel'?'channels':assetType==='vod'?'vod_assets':null;if(!table)throw Object.assign(new Error('Unsupported asset type'),{statusCode:400});const asset=db.prepare(`SELECT * FROM ${table} WHERE id=? AND active=1`).get(assetId);if(!asset||blocked(assetType,assetId))throw Object.assign(new Error('Asset unavailable'),{statusCode:404});if(!sourceValid(asset.source_id))throw Object.assign(new Error('Content supplier rights are not active'),{statusCode:451});if(!rightsValid(asset,country))throw Object.assign(new Error('Content rights unavailable in this territory or window'),{statusCode:451});if(profileId){const p=db.prepare('SELECT * FROM profiles WHERE id=? AND user_id=?').get(profileId,userId),rating=asset.rating||parseJson(asset.metadata_json,{}).rating;if(p?.is_kids&&parseJson(asset.metadata_json,{}).audience==='adult')throw Object.assign(new Error('Blocked by kids profile'),{statusCode:403});if(p?.max_rating&&rating&&rating!==p.max_rating&&['TV-MA','R','NC-17'].includes(rating))throw Object.assign(new Error('Blocked by parental rating controls'),{statusCode:403})}ensureDevice(userId,deviceId,platform);enforceConcurrent(userId);const fraud=db.prepare("SELECT MAX(risk_score) score FROM fraud_events WHERE user_id=? AND status='open'").get(userId);if(Number(fraud?.score||0)>=config.fraudBlockScore)throw Object.assign(new Error('Playback requires account verification'),{statusCode:403});const sources=[asset.playback_url,...parseJson(asset.backup_playback_urls,[])].filter(Boolean);if(!sources.length)throw Object.assign(new Error('Playback source not provisioned'),{statusCode:503});const playId=id('play'),expiresAt=new Date(Date.now()+config.playbackSessionMinutes*60000).toISOString(),watermark=id('wm');db.prepare('INSERT INTO playback_sessions(id,user_id,asset_type,asset_id,device_id,watermark_token,expires_at,created_at) VALUES(?,?,?,?,?,?,?,?)').run(playId,userId,assetType,assetId,deviceId,watermark,expiresAt,now());const payload=`${playId}.${userId}.${assetType}.${assetId}.${expiresAt}.${watermark}`;return{id:playId,playbackUrl:sources[0],fallbackUrls:sources.slice(1),playbackType:asset.playback_type,expiresAt,watermarkToken:watermark,token:`${Buffer.from(payload).toString('base64url')}.${sign(payload,config.playbackSigningSecret)}`}}
+export function authorizeDownload({userId,assetId,country='US',deviceId=null}){if(!isEntitled(userId))throw Object.assign(new Error('Active subscription required'),{statusCode:402});const a=getDb().prepare('SELECT * FROM vod_assets WHERE id=? AND active=1').get(assetId);if(!a||!a.download_allowed||blocked('vod',assetId)||!sourceValid(a.source_id)||!rightsValid(a,country))throw Object.assign(new Error('Offline viewing is not licensed for this title'),{statusCode:451});ensureDevice(userId,deviceId,'mobile');return createPlaybackSession({userId,assetType:'vod',assetId,country,deviceId,platform:'mobile'})}
+export function createMultiviewSession({userId,assets,country='US',deviceId=null}){if(!Array.isArray(assets)||assets.length<2||assets.length>4)throw Object.assign(new Error('Multiview supports 2–4 streams'),{statusCode:400});return assets.map(a=>createPlaybackSession({userId,assetType:a.assetType,assetId:a.assetId,country,deviceId,platform:'multiview'}))}
+export function scheduleRecording(userId,programId){if(!isEntitled(userId))throw Object.assign(new Error('Active subscription required'),{statusCode:402});const db=getDb(),p=db.prepare('SELECT p.*,c.dvr_allowed,c.id channel_id FROM programs p JOIN channels c ON c.id=p.channel_id WHERE p.id=?').get(programId);if(!p)throw Object.assign(new Error('Program not found'),{statusCode:404});if(!p.dvr_allowed)throw Object.assign(new Error('DVR rights unavailable for this channel'),{statusCode:451});const r={id:id('rec'),userId,programId,status:'scheduled',createdAt:now()};db.prepare('INSERT INTO dvr_recordings(id,user_id,program_id,status,created_at) VALUES(?,?,?,?,?)').run(r.id,userId,programId,r.status,r.createdAt);return r}
+export function listRecordings(userId){return getDb().prepare('SELECT d.id,d.status,d.created_at,p.title,p.starts_at,p.ends_at,c.name channel_name FROM dvr_recordings d JOIN programs p ON p.id=d.program_id JOIN channels c ON c.id=p.channel_id WHERE d.user_id=? ORDER BY p.starts_at DESC').all(userId)}
+export function registerSource({name,adapterType,configJson={},rightsVerified=false,status='inactive'}){if(!ADAPTER_TYPES.includes(adapterType))throw new Error('Invalid adapter type');const sid=id('src');getDb().prepare('INSERT INTO content_sources(id,name,adapter_type,status,rights_verified,config_json,created_at) VALUES(?,?,?,?,?,?,?)').run(sid,name,adapterType,status,rightsVerified?1:0,JSON.stringify(configJson),now());return sid}
