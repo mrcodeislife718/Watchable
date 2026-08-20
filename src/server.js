@@ -1,97 +1,20 @@
-import http from 'node:http';
-import fs from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { config, PLAN, validateProductionConfig } from './config.js';
-import { createUser, getUserAuthByEmail, verifyPassword, createSession, userFromToken, revokeSession, getUserById } from './auth.js';
-import { createCheckout, getSubscription, listCommissionSummary, handleStripeWebhook } from './billing.js';
-import { listChannels, listVod, guide, createPlaybackSession, scheduleRecording, listRecordings } from './content.js';
-import { getDb } from './db.js';
-import { seedDemo } from './seed.js';
-import { id, now } from './util.js';
-import { decideAd, trackAd } from './ads.js';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const publicDir = path.resolve(__dirname, '../public');
-const productionErrors=validateProductionConfig();
-if(productionErrors.length) throw new Error(`Production configuration invalid: ${productionErrors.join('; ')}`);
-if(process.env.NODE_ENV!=='production') seedDemo();
-
-function send(res, status, body, headers={}) {
-  const payload = typeof body === 'string' ? body : JSON.stringify(body);
-  res.writeHead(status, { 'Content-Type': typeof body === 'string' ? 'text/plain; charset=utf-8' : 'application/json; charset=utf-8', 'Cache-Control':'no-store', ...headers });
-  res.end(payload);
-}
-function parseCookies(req) { return Object.fromEntries((req.headers.cookie||'').split(';').map(x=>x.trim()).filter(Boolean).map(v=>{const i=v.indexOf('='); return [decodeURIComponent(v.slice(0,i)),decodeURIComponent(v.slice(i+1))]})); }
-async function readRaw(req) { const chunks=[]; let size=0; for await (const c of req){size+=c.length;if(size>1024*1024)throw Object.assign(new Error('Request too large'),{statusCode:413});chunks.push(c)} return Buffer.concat(chunks).toString('utf8'); }
-async function readJson(req) { const raw=await readRaw(req); if(!raw)return {}; return JSON.parse(raw); }
-function authUser(req) { const h=req.headers.authorization; const token=h?.startsWith('Bearer ')?h.slice(7):parseCookies(req).watchable_session; return userFromToken(token); }
-function requireUser(req) { const user=authUser(req); if (!user) throw Object.assign(new Error('Authentication required'),{statusCode:401}); return user; }
-function safeStaticPath(urlPath) { const rel=urlPath==='/'?'index.html':urlPath.replace(/^\//,''); const file=path.normalize(path.join(publicDir,rel)); if (!file.startsWith(publicDir)) return null; return file; }
-function serveStatic(req,res,urlPath) {
-  const file=safeStaticPath(urlPath); if (!file || !fs.existsSync(file) || fs.statSync(file).isDirectory()) return false;
-  const ext=path.extname(file); const types={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.json':'application/json; charset=utf-8','.svg':'image/svg+xml','.png':'image/png','.webmanifest':'application/manifest+json'};
-  res.writeHead(200,{'Content-Type':types[ext]||'application/octet-stream','Cache-Control':ext==='.html'?'no-store':'public, max-age=3600'}); fs.createReadStream(file).pipe(res); return true;
-}
-function audit(action,user,targetType,targetId,detail={}) { getDb().prepare('INSERT INTO audit_events (id,actor_user_id,action,target_type,target_id,detail_json,created_at) VALUES (?,?,?,?,?,?,?)').run(id('aud'),user?.id||null,action,targetType||null,targetId||null,JSON.stringify(detail),now()); }
-
-async function api(req,res,url) {
-  const method=req.method||'GET';
-  if (method==='GET' && url.pathname==='/api/health') return send(res,200,{ok:true,service:'Watchable TV',version:'1.0.0',time:now()});
-  if (method==='GET' && url.pathname==='/api/plan') return send(res,200,PLAN);
-  if (method==='POST' && url.pathname==='/api/billing/stripe/webhook') { const raw=await readRaw(req); const result=await handleStripeWebhook(raw,req.headers['stripe-signature']); return send(res,200,result); }
-  if (method==='POST' && url.pathname==='/api/auth/register') {
-    const b=await readJson(req); if(!b.email||!b.password||!b.displayName) return send(res,400,{error:'email, password and displayName are required'});
-    if(String(b.password).length<10) return send(res,400,{error:'Password must be at least 10 characters'});
-    const user=await createUser(b); const session=createSession(user.id); audit('user.registered',user,'user',user.id);
-    return send(res,201,{user,expiresAt:session.expiresAt},{'Set-Cookie':`watchable_session=${encodeURIComponent(session.token)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000`});
-  }
-  if (method==='POST' && url.pathname==='/api/auth/login') {
-    const b=await readJson(req); const auth=getUserAuthByEmail(b.email||''); if(!auth||!(await verifyPassword(b.password||'',auth.password_hash))) return send(res,401,{error:'Invalid email or password'});
-    const session=createSession(auth.id); const user=getUserById(auth.id); audit('user.logged_in',user,'user',user.id);
-    return send(res,200,{user,expiresAt:session.expiresAt},{'Set-Cookie':`watchable_session=${encodeURIComponent(session.token)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000`});
-  }
-  if (method==='POST' && url.pathname==='/api/auth/logout') { const token=parseCookies(req).watchable_session; revokeSession(token); return send(res,200,{ok:true},{'Set-Cookie':'watchable_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0'}); }
-  if (method==='GET' && url.pathname==='/api/me') { const user=requireUser(req); return send(res,200,{user,subscription:getSubscription(user.id)}); }
-  if (method==='POST' && url.pathname==='/api/billing/checkout') { const user=requireUser(req); const b=await readJson(req); const result=await createCheckout({user,repCode:b.repCode||''}); audit('billing.checkout_created',user,'subscription',result.subscription?.id||null,{provider:result.provider}); return send(res,200,result); }
-  if (method==='GET' && url.pathname==='/api/channels') { requireUser(req); return send(res,200,{channels:listChannels()}); }
-  if (method==='GET' && url.pathname==='/api/vod') { requireUser(req); return send(res,200,{assets:listVod()}); }
-
-  if (method==='GET' && url.pathname==='/api/search') { requireUser(req); const q=(url.searchParams.get('q')||'').trim().toLowerCase(); if(!q)return send(res,200,{channels:[],vod:[]}); return send(res,200,{channels:listChannels().filter(x=>x.name.toLowerCase().includes(q)||x.category.toLowerCase().includes(q)),vod:listVod().filter(x=>x.title.toLowerCase().includes(q)||(x.description||'').toLowerCase().includes(q))}); }
-  if (method==='GET' && url.pathname==='/api/favorites') { const user=requireUser(req); return send(res,200,{favorites:getDb().prepare('SELECT asset_type,asset_id,created_at FROM favorites WHERE user_id=? ORDER BY created_at DESC').all(user.id)}); }
-  if (method==='POST' && url.pathname==='/api/favorites') { const user=requireUser(req); const b=await readJson(req); getDb().prepare('INSERT OR IGNORE INTO favorites (user_id,asset_type,asset_id,created_at) VALUES (?,?,?,?)').run(user.id,b.assetType,b.assetId,now()); return send(res,201,{ok:true}); }
-  if (method==='DELETE' && url.pathname==='/api/favorites') { const user=requireUser(req); const b=await readJson(req); getDb().prepare('DELETE FROM favorites WHERE user_id=? AND asset_type=? AND asset_id=?').run(user.id,b.assetType,b.assetId); return send(res,200,{ok:true}); }
-  if (method==='GET' && url.pathname==='/api/profiles') { const user=requireUser(req); return send(res,200,{profiles:getDb().prepare('SELECT * FROM profiles WHERE user_id=? ORDER BY created_at').all(user.id)}); }
-  if (method==='POST' && url.pathname==='/api/profiles') { const user=requireUser(req); const b=await readJson(req); if(!b.name)return send(res,400,{error:'name required'}); const profile={id:id('pro'),userId:user.id,name:String(b.name).slice(0,40),isKids:b.isKids?1:0,createdAt:now()}; getDb().prepare('INSERT INTO profiles (id,user_id,name,is_kids,created_at) VALUES (?,?,?,?,?)').run(profile.id,profile.userId,profile.name,profile.isKids,profile.createdAt); return send(res,201,profile); }
-  if (method==='GET' && url.pathname==='/api/ads/decision') { const user=requireUser(req); return send(res,200,{ad:decideAd({userId:user.id,assetType:url.searchParams.get('assetType'),assetId:url.searchParams.get('assetId'),category:url.searchParams.get('category')})}); }
-  if (method==='POST' && url.pathname==='/api/ads/event') { const user=requireUser(req); const b=await readJson(req); return send(res,201,trackAd({...b,userId:user.id})); }
-
-  if (method==='GET' && url.pathname==='/api/guide') { requireUser(req); return send(res,200,{guide:guide({hours:Number(url.searchParams.get('hours')||6)})}); }
-  if (method==='POST' && url.pathname==='/api/playback/session') { const user=requireUser(req); const b=await readJson(req); const result=createPlaybackSession({userId:user.id,assetType:b.assetType,assetId:b.assetId,country:req.headers['x-watchable-country']||'US'}); audit('playback.session_created',user,b.assetType,b.assetId); return send(res,200,result); }
-  if (method==='POST' && url.pathname==='/api/dvr') { const user=requireUser(req); const b=await readJson(req); const rec=scheduleRecording(user.id,b.programId); audit('dvr.scheduled',user,'program',b.programId); return send(res,201,rec); }
-  if (method==='GET' && url.pathname==='/api/dvr') { const user=requireUser(req); return send(res,200,{recordings:listRecordings(user.id)}); }
-  if (method==='GET' && url.pathname==='/api/admin/summary') {
-    const user=requireUser(req); if(user.role!=='admin') return send(res,403,{error:'Admin required'}); const db=getDb();
-    const summary={users:db.prepare('SELECT COUNT(*) n FROM users').get().n,activeSubscriptions:db.prepare("SELECT COUNT(*) n FROM subscriptions WHERE status='active'").get().n,channels:db.prepare('SELECT COUNT(*) n FROM channels WHERE active=1').get().n,vod:db.prepare('SELECT COUNT(*) n FROM vod_assets WHERE active=1').get().n,rightsVerifiedSources:db.prepare('SELECT COUNT(*) n FROM content_sources WHERE rights_verified=1').get().n,commissionCents:db.prepare("SELECT COALESCE(SUM(commission_cents),0) n FROM commission_events WHERE status='earned'").get().n};
-    return send(res,200,summary);
-  }
-  if (method==='GET' && url.pathname.startsWith('/api/reps/')) {
-    const user=requireUser(req); if(user.role!=='admin') return send(res,403,{error:'Admin required'}); const code=url.pathname.split('/')[3]; const rep=getDb().prepare('SELECT * FROM reps WHERE code=?').get(code); if(!rep) return send(res,404,{error:'Rep not found'}); return send(res,200,{rep,summary:listCommissionSummary(rep.id)});
-  }
-  return send(res,404,{error:'Not found'});
-}
-
-const server=http.createServer(async (req,res)=>{
-  try {
-    const url=new URL(req.url||'/',`http://${req.headers.host||'localhost'}`);
-    if(url.pathname.startsWith('/api/')) return await api(req,res,url);
-    if(serveStatic(req,res,url.pathname)) return;
-    return send(res,404,'Not found');
-  } catch(error) {
-    console.error(error);
-    return send(res,error.statusCode||500,{error:error.message||'Internal server error'});
-  }
-});
-
-if (process.env.NODE_ENV!=='test') server.listen(config.port,()=>console.log(`Watchable TV listening on ${config.baseUrl}`));
-export { server };
+import http from 'node:http';import fs from 'node:fs';import path from 'node:path';import {fileURLToPath} from 'node:url';import {config,PLAN,validateProductionConfig} from './config.js';import {createUser,getUserAuthByEmail,verifyPassword,createSession,userFromToken,revokeSession,getUserById} from './auth.js';import {createCheckout,getSubscription,listCommissionSummary,handleStripeWebhook} from './billing.js';import {listChannels,listVod,guide,createPlaybackSession,scheduleRecording,listRecordings} from './content.js';import {getDb} from './db.js';import {seedDemo} from './seed.js';import {id,now} from './util.js';import {decideAd,trackAd} from './ads.js';import {discover,whatsOnNow,tracks,recordWatch,continueWatching,createAlert,createParty,joinParty,listEvents,eventChat,redeemGift,creators,creatorDashboard,shortForm,franchisePortfolio,rightsExpiring,takeDown} from './ecosystem.js';
+const __dirname=path.dirname(fileURLToPath(import.meta.url)),publicDir=path.resolve(__dirname,'../public');const productionErrors=validateProductionConfig();if(productionErrors.length)throw new Error(`Production configuration invalid: ${productionErrors.join('; ')}`);if(process.env.NODE_ENV!=='production')seedDemo();
+function send(res,status,body,headers={}){const payload=typeof body==='string'?body:JSON.stringify(body);res.writeHead(status,{'Content-Type':typeof body==='string'?'text/plain; charset=utf-8':'application/json; charset=utf-8','Cache-Control':'no-store',...headers});res.end(payload)}
+function parseCookies(req){return Object.fromEntries((req.headers.cookie||'').split(';').map(x=>x.trim()).filter(Boolean).map(v=>{const i=v.indexOf('=');return[decodeURIComponent(v.slice(0,i)),decodeURIComponent(v.slice(i+1))]}))}async function readRaw(req){const chunks=[];let size=0;for await(const c of req){size+=c.length;if(size>1024*1024)throw Object.assign(new Error('Request too large'),{statusCode:413});chunks.push(c)}return Buffer.concat(chunks).toString('utf8')}async function readJson(req){const raw=await readRaw(req);return raw?JSON.parse(raw):{}}function authUser(req){const h=req.headers.authorization,token=h?.startsWith('Bearer ')?h.slice(7):parseCookies(req).watchable_session;return userFromToken(token)}function requireUser(req){const u=authUser(req);if(!u)throw Object.assign(new Error('Authentication required'),{statusCode:401});return u}function requireAdmin(req){const u=requireUser(req);if(u.role!=='admin')throw Object.assign(new Error('Admin required'),{statusCode:403});return u}function safeStaticPath(p){const rel=p==='/'?'index.html':p.replace(/^\//,''),file=path.normalize(path.join(publicDir,rel));return file.startsWith(publicDir)?file:null}function serveStatic(req,res,p){const file=safeStaticPath(p);if(!file||!fs.existsSync(file)||fs.statSync(file).isDirectory())return false;const ext=path.extname(file),types={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.json':'application/json; charset=utf-8','.svg':'image/svg+xml','.png':'image/png','.webmanifest':'application/manifest+json'};res.writeHead(200,{'Content-Type':types[ext]||'application/octet-stream','Cache-Control':ext==='.html'?'no-store':'public, max-age=3600'});fs.createReadStream(file).pipe(res);return true}function audit(action,user,targetType,targetId,detail={}){getDb().prepare('INSERT INTO audit_events(id,actor_user_id,action,target_type,target_id,detail_json,created_at) VALUES(?,?,?,?,?,?,?)').run(id('aud'),user?.id||null,action,targetType||null,targetId||null,JSON.stringify(detail),now())}
+async function api(req,res,url){const m=req.method||'GET',p=url.pathname;
+if(m==='GET'&&p==='/api/health')return send(res,200,{ok:true,service:'Watchable TV',version:'1.1.0',time:now()});if(m==='GET'&&p==='/api/plan')return send(res,200,PLAN);if(m==='POST'&&p==='/api/billing/stripe/webhook'){const raw=await readRaw(req);return send(res,200,await handleStripeWebhook(raw,req.headers['stripe-signature']))}
+if(m==='POST'&&p==='/api/auth/register'){const b=await readJson(req);if(!b.email||!b.password||!b.displayName)return send(res,400,{error:'email, password and displayName are required'});if(String(b.password).length<10)return send(res,400,{error:'Password must be at least 10 characters'});const user=await createUser(b),s=createSession(user.id);audit('user.registered',user,'user',user.id);return send(res,201,{user,expiresAt:s.expiresAt},{'Set-Cookie':`watchable_session=${encodeURIComponent(s.token)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000`})}
+if(m==='POST'&&p==='/api/auth/login'){const b=await readJson(req),a=getUserAuthByEmail(b.email||'');if(!a||!(await verifyPassword(b.password||'',a.password_hash)))return send(res,401,{error:'Invalid email or password'});const s=createSession(a.id),u=getUserById(a.id);return send(res,200,{user:u,expiresAt:s.expiresAt},{'Set-Cookie':`watchable_session=${encodeURIComponent(s.token)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000`})}if(m==='POST'&&p==='/api/auth/logout'){revokeSession(parseCookies(req).watchable_session);return send(res,200,{ok:true},{'Set-Cookie':'watchable_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0'})}
+if(m==='GET'&&p==='/api/me'){const u=requireUser(req);return send(res,200,{user:u,subscription:getSubscription(u.id)})}if(m==='POST'&&p==='/api/billing/checkout'){const u=requireUser(req),b=await readJson(req),r=await createCheckout({user:u,repCode:b.repCode||''});return send(res,200,r)}if(m==='GET'&&p==='/api/channels'){requireUser(req);return send(res,200,{channels:listChannels()})}if(m==='GET'&&p==='/api/vod'){requireUser(req);return send(res,200,{assets:listVod()})}if(m==='GET'&&p==='/api/guide'){requireUser(req);return send(res,200,{guide:guide({hours:Number(url.searchParams.get('hours')||6)})})}
+if(m==='GET'&&p==='/api/discover'){const u=requireUser(req);return send(res,200,discover({userId:u.id,profileId:url.searchParams.get('profileId'),language:url.searchParams.get('language'),mood:url.searchParams.get('mood'),category:url.searchParams.get('category')}))}if(m==='GET'&&p==='/api/now'){requireUser(req);return send(res,200,{programs:whatsOnNow()})}if(m==='GET'&&p==='/api/shorts'){requireUser(req);return send(res,200,{assets:shortForm()})}if(m==='GET'&&p==='/api/tracks'){requireUser(req);return send(res,200,{tracks:tracks(url.searchParams.get('assetType'),url.searchParams.get('assetId'))})}
+if(m==='GET'&&p==='/api/search'){requireUser(req);const q=(url.searchParams.get('q')||'').toLowerCase();return send(res,200,{channels:listChannels().filter(x=>`${x.name} ${x.category} ${x.metadata_json}`.toLowerCase().includes(q)),vod:listVod().filter(x=>`${x.title} ${x.description||''} ${x.metadata_json}`.toLowerCase().includes(q))})}
+if(m==='GET'&&p==='/api/profiles'){const u=requireUser(req);return send(res,200,{profiles:getDb().prepare('SELECT * FROM profiles WHERE user_id=? ORDER BY created_at').all(u.id)})}if(m==='POST'&&p==='/api/profiles'){const u=requireUser(req),b=await readJson(req),profile={id:id('pro'),createdAt:now()};getDb().prepare('INSERT INTO profiles(id,user_id,name,is_kids,max_rating,preferred_languages,accessibility_json,created_at) VALUES(?,?,?,?,?,?,?,?)').run(profile.id,u.id,String(b.name||'Profile').slice(0,40),b.isKids?1:0,b.maxRating||null,JSON.stringify(b.preferredLanguages||[]),JSON.stringify(b.accessibility||{}),profile.createdAt);return send(res,201,profile)}
+if(m==='POST'&&p==='/api/watch'){const u=requireUser(req),b=await readJson(req);return send(res,201,recordWatch({userId:u.id,...b}))}if(m==='GET'&&p==='/api/continue'){const u=requireUser(req);return send(res,200,{items:continueWatching(u.id,url.searchParams.get('profileId'))})}if(m==='POST'&&p==='/api/alerts'){const u=requireUser(req);return send(res,201,createAlert(u.id,await readJson(req)))}
+if(m==='POST'&&p==='/api/parties'){const u=requireUser(req);return send(res,201,createParty(u.id,await readJson(req))}if(m==='POST'&&p==='/api/parties/join'){const u=requireUser(req),b=await readJson(req);return send(res,200,joinParty(u.id,b.code))}if(m==='GET'&&p==='/api/events'){requireUser(req);return send(res,200,{events:listEvents()})}if(m==='POST'&&p.startsWith('/api/events/')&&p.endsWith('/chat')){const u=requireUser(req),b=await readJson(req),eventId=p.split('/')[3];return send(res,201,eventChat(u.id,eventId,b.message))}
+if(m==='POST'&&p==='/api/gifts/redeem'){const u=requireUser(req),b=await readJson(req);return send(res,200,redeemGift(u.id,b.code))}if(m==='GET'&&p==='/api/creators'){requireUser(req);return send(res,200,{creators:creators()})}if(m==='GET'&&p.startsWith('/api/creators/')&&p.endsWith('/dashboard')){requireUser(req);return send(res,200,creatorDashboard(p.split('/')[3])||{error:'Creator not found'})}if(m==='GET'&&p==='/api/franchises'){requireUser(req);return send(res,200,{franchises:franchisePortfolio()})}
+if(m==='GET'&&p==='/api/favorites'){const u=requireUser(req);return send(res,200,{favorites:getDb().prepare('SELECT asset_type,asset_id,created_at FROM favorites WHERE user_id=? ORDER BY created_at DESC').all(u.id)})}if(m==='POST'&&p==='/api/favorites'){const u=requireUser(req),b=await readJson(req);getDb().prepare('INSERT OR IGNORE INTO favorites(user_id,asset_type,asset_id,created_at) VALUES(?,?,?,?)').run(u.id,b.assetType,b.assetId,now());return send(res,201,{ok:true})}
+if(m==='GET'&&p==='/api/ads/decision'){const u=requireUser(req);return send(res,200,{ad:decideAd({userId:u.id,assetType:url.searchParams.get('assetType'),assetId:url.searchParams.get('assetId'),category:url.searchParams.get('category')})})}if(m==='POST'&&p==='/api/ads/event'){const u=requireUser(req);return send(res,201,trackAd({...await readJson(req),userId:u.id}))}
+if(m==='POST'&&p==='/api/playback/session'){const u=requireUser(req),b=await readJson(req),r=createPlaybackSession({userId:u.id,assetType:b.assetType,assetId:b.assetId,country:req.headers['x-watchable-country']||'US'});audit('playback.session_created',u,b.assetType,b.assetId);return send(res,200,r)}if(m==='POST'&&p==='/api/dvr'){const u=requireUser(req),b=await readJson(req);return send(res,201,scheduleRecording(u.id,b.programId))}if(m==='GET'&&p==='/api/dvr'){const u=requireUser(req);return send(res,200,{recordings:listRecordings(u.id)})}
+if(m==='GET'&&p==='/api/admin/summary'){requireAdmin(req);const db=getDb();return send(res,200,{users:db.prepare('SELECT COUNT(*) n FROM users').get().n,activeSubscriptions:db.prepare("SELECT COUNT(*) n FROM subscriptions WHERE status='active'").get().n,channels:db.prepare('SELECT COUNT(*) n FROM channels WHERE active=1').get().n,vod:db.prepare('SELECT COUNT(*) n FROM vod_assets WHERE active=1').get().n,creators:db.prepare('SELECT COUNT(*) n FROM creators').get().n,events:db.prepare('SELECT COUNT(*) n FROM live_events').get().n,sponsors:db.prepare('SELECT COUNT(*) n FROM sponsors').get().n})}if(m==='GET'&&p==='/api/admin/rights/expiring'){requireAdmin(req);return send(res,200,{rights:rightsExpiring(Number(url.searchParams.get('days')||90))})}if(m==='POST'&&p==='/api/admin/takedowns'){const u=requireAdmin(req),b=await readJson(req),r=takeDown(b.assetType,b.assetId,b.reason);audit('content.takedown',u,b.assetType,b.assetId,{reason:b.reason});return send(res,201,r)}if(m==='GET'&&p.startsWith('/api/reps/')){requireAdmin(req);const code=p.split('/')[3],rep=getDb().prepare('SELECT * FROM reps WHERE code=?').get(code);if(!rep)return send(res,404,{error:'Rep not found'});return send(res,200,{rep,summary:listCommissionSummary(rep.id)})}return send(res,404,{error:'Not found'})}
+const server=http.createServer(async(req,res)=>{try{const url=new URL(req.url||'/',`http://${req.headers.host||'localhost'}`);if(url.pathname.startsWith('/api/'))return await api(req,res,url);if(serveStatic(req,res,url.pathname))return;return send(res,404,'Not found')}catch(e){console.error(e);return send(res,e.statusCode||500,{error:e.message||'Internal server error'})}});if(process.env.NODE_ENV!=='test')server.listen(config.port,()=>console.log(`Watchable TV listening on ${config.baseUrl}`));export{server};
