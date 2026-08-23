@@ -1,0 +1,24 @@
+{
+  "source": {
+    "name": "Licensed Supplier Name",
+    "adapterType": "LICENSED_LINEAR",
+    "status": "active",
+    "rightsVerified": true,
+    "config": {"contractReference":"REPLACE-ME"}
+  },
+  "channels": [
+    {
+      "slug": "example-live",
+      "name": "Example Live",
+      "category": "Entertainment",
+      "playbackUrl": "https://supplier.example/live/master.m3u8",
+      "playbackType": "hls",
+      "territories": ["US"],
+      "dvrAllowed": false,
+      "premium": false,
+      "sports": false,
+      "programs": []
+    }
+  ],
+  "vod": []
+}
